@@ -10,8 +10,13 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        //
+    ->withMiddleware(function (Illuminate\Foundation\Configuration\Middleware $middleware) {
+    $middleware->alias([
+        'permiso' => \App\Http\Middleware\VerificarPermiso::class,
+        'admin'   => \App\Http\Middleware\SoloAdmin::class,
+        ]);
+        $middleware->redirectGuestsTo('/login');        // quien no inició sesión va al login
+        $middleware->redirectUsersTo('/');              // quien ya ingresó y abre /login va al inicio
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
