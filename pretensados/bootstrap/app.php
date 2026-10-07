@@ -11,9 +11,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Illuminate\Foundation\Configuration\Middleware $middleware) {
-    $middleware->alias([
-        'permiso' => \App\Http\Middleware\VerificarPermiso::class,
-        'admin'   => \App\Http\Middleware\SoloAdmin::class,
+        $middleware->alias([
+            'acceso' => \App\Http\Middleware\VerificarAcceso::class,   // acceso:codigo[,M]
         ]);
         $middleware->redirectGuestsTo('/login');        // quien no inició sesión va al login
         $middleware->redirectUsersTo('/');              // quien ya ingresó y abre /login va al inicio

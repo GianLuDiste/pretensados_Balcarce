@@ -17,8 +17,8 @@
         <div class="actions">
             <button class="btn">Buscar</button>
             <a class="btn sec" href="{{ route('clientes.index') }}">Limpiar</a>
-            @if ($u->puede('A')) <a class="btn" href="{{ route('clientes.create') }}">Nuevo cliente</a> @endif
-            @if ($u->puede('I')) <a class="btn sec" target="_blank" href="{{ route('clientes.print', request()->only('q', 'localidad')) }}">Imprimir listado</a> @endif
+            @if ($u->puedeModificar('clientes')) <a class="btn" href="{{ route('clientes.create') }}">Nuevo cliente</a> @endif
+            <a class="btn sec" target="_blank" href="{{ route('clientes.print', request()->only('q', 'localidad')) }}">Imprimir listado</a>
         </div>
     </form>
 </section>

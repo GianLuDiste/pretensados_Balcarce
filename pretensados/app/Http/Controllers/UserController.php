@@ -3,59 +3,73 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UserRequest;
+use App\Models\Acceso;
+use App\Models\Perfil;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
     public function index(Request $request)
     {
-        $usuarios = User::query()
+        $usuarios = User::with('perfiles')
             ->when($request->filled('q'), function ($q) use ($request) {
                 $t = '%' . $request->q . '%';
                 $q->where(fn ($w) => $w->where('name', 'like', $t)->orWhere('username', 'like', $t)->orWhere('email', 'like', $t));
             })
+            ->when($request->filled('perfil'), fn ($q) => $q->whereHas('perfiles', fn ($p) => $p->where('perfiles.id', $request->perfil)))
             ->orderBy('name')->paginate(25)->withQueryString();
 
-        return view('usuarios.index', compact('usuarios'));
+        return view('usuarios.index', ['usuarios' => $usuarios, 'perfiles' => Perfil::orderBy('nombre')->get()]);
     }
 
     public function create()
     {
-        return view('usuarios.form', ['usuario' => new User(['activo' => true, 'permisos' => 'C'])]);
+        return view('usuarios.form', $this->datosVista(new User(['activo' => true])));
     }
 
     public function store(UserRequest $request)
     {
         $d = $request->validated();
+        $perfiles = $this->idsPerfiles($d);
 
-        User::create([
-            'name'     => $d['name'],
-            'username' => $d['username'],
-            'email'    => $d['email'],
-            'telefono' => $d['telefono'] ?? null,
-            'password' => $d['password'],
-            'es_admin' => $request->boolean('es_admin'),
-            'activo'   => $request->boolean('activo'),
-            'permisos' => $this->armarPermisos($d['permisos'] ?? []),
-        ]);
+        if ($error = $this->controlAdmin($request->user(), null, $perfiles)) {
+            return back()->withInput()->withErrors(['perfiles' => $error]);
+        }
+
+        DB::transaction(function () use ($d, $request, $perfiles) {
+            $u = User::create([
+                'name'     => $d['name'],
+                'username' => $d['username'],
+                'email'    => $d['email'],
+                'telefono' => $d['telefono'] ?? null,
+                'password' => $d['password'],
+                'activo'   => $request->boolean('activo'),
+            ]);
+            $u->perfiles()->sync($perfiles);
+        });
 
         return redirect()->route('usuarios.index')->with('ok', 'Usuario creado.');
     }
 
     public function edit(User $usuario)
     {
-        return view('usuarios.form', compact('usuario'));
+        return view('usuarios.form', $this->datosVista($usuario));
     }
 
     public function update(UserRequest $request, User $usuario)
     {
         $d = $request->validated();
-        $esAdmin = $request->boolean('es_admin');
-        $activo  = $request->boolean('activo');
+        $activo = $request->boolean('activo');
+        $perfiles = $this->idsPerfiles($d);
 
-        if ($usuario->esUltimoAdminActivo() && (! $esAdmin || ! $activo)) {
-            return back()->withInput()->withErrors(['es_admin' => 'Es el único administrador activo: no se le puede quitar el rol ni desactivarlo.']);
+        if ($error = $this->controlAdmin($request->user(), $usuario, $perfiles)) {
+            return back()->withInput()->withErrors(['perfiles' => $error]);
+        }
+        $quedaAdmin = Perfil::whereIn('id', $perfiles)->where('es_admin', true)->exists();
+        if ($usuario->esUltimoAdminActivo() && (! $quedaAdmin || ! $activo)) {
+            return back()->withInput()->withErrors(['perfiles' => 'Es el único administrador activo: no se le puede quitar el perfil Administrador ni desactivarlo.']);
         }
         if ($usuario->is($request->user()) && ! $activo) {
             return back()->withInput()->withErrors(['activo' => 'No podés desactivar tu propio usuario.']);
@@ -66,14 +80,16 @@ class UserController extends Controller
             'username' => $d['username'],
             'email'    => $d['email'],
             'telefono' => $d['telefono'] ?? null,
-            'es_admin' => $esAdmin,
             'activo'   => $activo,
-            'permisos' => $this->armarPermisos($d['permisos'] ?? []),
         ];
         if (! empty($d['password'])) {
             $datos['password'] = $d['password'];
         }
-        $usuario->update($datos);
+
+        DB::transaction(function () use ($usuario, $datos, $perfiles) {
+            $usuario->update($datos);
+            $usuario->perfiles()->sync($perfiles);
+        });
 
         return redirect()->route('usuarios.index')->with('ok', 'Usuario actualizado.');
     }
@@ -83,23 +99,51 @@ class UserController extends Controller
         if ($usuario->is($request->user())) {
             return back()->withErrors(['usuario' => 'No podés eliminar tu propio usuario.']);
         }
+        if ($usuario->esAdmin() && ! $request->user()->esAdmin()) {
+            return back()->withErrors(['usuario' => 'Solo un administrador puede eliminar a otro administrador.']);
+        }
         if ($usuario->esUltimoAdminActivo()) {
             return back()->withErrors(['usuario' => 'No se puede eliminar al único administrador activo.']);
         }
 
-        $usuario->delete();
+        $usuario->delete();   // perfil_user se borra en cascada
 
         return redirect()->route('usuarios.index')->with('ok', 'Usuario eliminado.');
     }
 
-    /** Ordena las letras como el VB ("ABMCI"); si tiene cualquier permiso, incluye Consulta (el VB cerraba el form sin "C"). */
-    private function armarPermisos(array $marcados): string
+    // ------------------------------------------------------------------
+
+    private function idsPerfiles(array $d): array
     {
-        $marcados = array_filter($marcados);
-        if ($marcados && ! in_array('C', $marcados, true)) {
-            $marcados[] = 'C';
+        return array_values(array_unique(array_map('intval', $d['perfiles'] ?? [])));
+    }
+
+    /**
+     * Solo un administrador puede: dar o quitar el perfil Administrador, y modificar a un usuario administrador
+     * (si no, alguien con acceso a Usuarios podría tomar la cuenta de un administrador o darse acceso total).
+     */
+    private function controlAdmin(User $actor, ?User $usuario, array $perfilesNuevos): ?string
+    {
+        if ($actor->esAdmin()) {
+            return null;
+        }
+        if ($usuario?->esAdmin()) {
+            return 'Solo un administrador puede modificar a otro administrador.';
+        }
+        if (Perfil::whereIn('id', $perfilesNuevos)->where('es_admin', true)->exists()) {
+            return 'Solo un administrador puede asignar el perfil Administrador.';
         }
 
-        return implode('', array_filter(['A', 'B', 'M', 'C', 'I'], fn ($l) => in_array($l, $marcados, true)));
+        return null;
+    }
+
+    private function datosVista(User $usuario): array
+    {
+        return [
+            'usuario'  => $usuario,
+            'perfiles' => Perfil::with('accesos')->orderByDesc('es_admin')->orderBy('nombre')->get(),
+            'accesos'  => Acceso::ordenados(),
+            'actorEsAdmin' => auth()->user()->esAdmin(),
+        ];
     }
 }

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Ingresar') · Pretensados Balcarce</title>
+    <link rel="icon" type="image/png" href="{{ asset('img/favicon.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -29,7 +30,7 @@
 
         /* ---- Lado de marca ---- */
         .brand { background: var(--navy); padding: clamp(1.5rem, 4vw, 3.5rem); display: flex; flex-direction: column; justify-content: space-between; gap: 2.5rem; }
-        .logo { width: 210px; max-width: 60%; height: auto; display: block; }
+        .logo { width: 260px; max-width: 62vw; height: auto; display: block; }
         .brand-body { max-width: 30rem; }
         .brand h1 { font-size: clamp(2rem, 4.2vw, 3.3rem); line-height: 1.12; font-weight: 800; margin: 0 0 1.4rem; letter-spacing: -.01em; }
         .brand h1 .acc { color: var(--lime); }

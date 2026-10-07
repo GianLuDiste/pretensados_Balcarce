@@ -5,7 +5,7 @@
     $u = auth()->user();
     $editar = $cliente->exists;
     $v = fn ($campo, $col) => old($campo, $cliente->getAttribute($col));
-    $puedeGuardar = $editar ? $u->puede('M') : $u->puede('A');
+    $puedeGuardar = $u->puedeModificar('clientes');
 @endphp
 
 @section('content')
@@ -79,7 +79,7 @@
     <div class="actions">
         @if ($puedeGuardar) <button class="btn">Guardar</button> @endif
         <a class="btn sec" href="{{ route('clientes.index') }}">{{ $puedeGuardar ? 'Cancelar' : 'Volver' }}</a>
-        @if ($editar && $u->puede('B'))
+        @if ($editar && $puedeGuardar)
             <button class="btn danger" form="form-eliminar"
                 onclick="return confirm('¿Confirma el borrado del cliente {{ $cliente->CODIGO }} - {{ addslashes($cliente->razon_social) }}?')">Eliminar</button>
         @endif

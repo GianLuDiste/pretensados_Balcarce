@@ -2,6 +2,8 @@
     $u = auth()->user();
     $enCotiz = request()->routeIs('cotizaciones.*');
     $enClientes = request()->routeIs('clientes.*');
+    $enSeguridad = request()->routeIs('usuarios.*', 'perfiles.*', 'accesos.*');
+    $verSeguridad = $u->puedeVer('usuarios') || $u->puedeVer('perfiles') || $u->puedeVer('accesos');
 @endphp
 
 <aside id="sidebar" class="sidebar" aria-label="Menú principal">
@@ -13,12 +15,11 @@
                 <a class="item home-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}"
                    title="Inicio" aria-label="Inicio" @if (request()->routeIs('home')) aria-current="page" @endif>
                     @include('layouts._logo-mark')
-                    <span class="txt wordmark">pretensados<br>balcarce</span>
                 </a>
             </li>
 
             {{-- Nivel 1: Cotizaciones → Nivel 2: Consulta / Nueva cotización --}}
-            @if ($u->puede('C'))
+            @if ($u->puedeVer('cotizaciones'))
                 <li class="has-sub {{ $enCotiz ? 'open active' : '' }}">
                     <button type="button" class="item" aria-expanded="{{ $enCotiz ? 'true' : 'false' }}" aria-controls="sub-cotizaciones" title="Cotizaciones">
                         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -31,7 +32,7 @@
                         <li class="sub-title" aria-hidden="true">Cotizaciones</li>
                         <li><a class="subitem {{ request()->routeIs('cotizaciones.index', 'cotizaciones.edit', 'cotizaciones.newVersion') ? 'active' : '' }}"
                                href="{{ route('cotizaciones.index') }}">Consulta</a></li>
-                        @if ($u->puede('A'))
+                        @if ($u->puedeModificar('cotizaciones'))
                             <li><a class="subitem {{ request()->routeIs('cotizaciones.create') ? 'active' : '' }}"
                                    href="{{ route('cotizaciones.create') }}">Nueva cotización</a></li>
                         @endif
@@ -40,7 +41,7 @@
             @endif
 
             {{-- Nivel 1: Clientes → Nivel 2: Consulta / Nuevo cliente --}}
-            @if ($u->puede('C'))
+            @if ($u->puedeVer('clientes'))
                 <li class="has-sub {{ $enClientes ? 'open active' : '' }}">
                     <button type="button" class="item" aria-expanded="{{ $enClientes ? 'true' : 'false' }}" aria-controls="sub-clientes" title="Clientes">
                         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -53,7 +54,7 @@
                         <li class="sub-title" aria-hidden="true">Clientes</li>
                         <li><a class="subitem {{ request()->routeIs('clientes.index', 'clientes.edit') ? 'active' : '' }}"
                                href="{{ route('clientes.index') }}">Consulta</a></li>
-                        @if ($u->puede('A'))
+                        @if ($u->puedeModificar('clientes'))
                             <li><a class="subitem {{ request()->routeIs('clientes.create') ? 'active' : '' }}"
                                    href="{{ route('clientes.create') }}">Nuevo cliente</a></li>
                         @endif
@@ -61,15 +62,28 @@
                 </li>
             @endif
 
-            {{-- Nivel 1: Usuarios (solo administradores) --}}
-            @if ($u->es_admin)
-                <li>
-                    <a class="item {{ request()->routeIs('usuarios.*') ? 'active' : '' }}" href="{{ route('usuarios.index') }}" title="Usuarios">
+            {{-- Nivel 1: Seguridad → Nivel 2: Usuarios / Perfiles / Accesos (cada uno es un acceso) --}}
+            @if ($verSeguridad)
+                <li class="has-sub {{ $enSeguridad ? 'open active' : '' }}">
+                    <button type="button" class="item" aria-expanded="{{ $enSeguridad ? 'true' : 'false' }}" aria-controls="sub-seguridad" title="Seguridad">
                         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.2c2.4.3 4 2.1 4 4.8"/>
+                            <path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6z"/><path d="m9 12 2.2 2.2L15.5 10"/>
                         </svg>
-                        <span class="txt">Usuarios</span>
-                    </a>
+                        <span class="txt">Seguridad</span>
+                        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <ul class="sub" id="sub-seguridad">
+                        <li class="sub-title" aria-hidden="true">Seguridad</li>
+                        @if ($u->puedeVer('usuarios'))
+                            <li><a class="subitem {{ request()->routeIs('usuarios.*') ? 'active' : '' }}" href="{{ route('usuarios.index') }}">Usuarios</a></li>
+                        @endif
+                        @if ($u->puedeVer('perfiles'))
+                            <li><a class="subitem {{ request()->routeIs('perfiles.*') ? 'active' : '' }}" href="{{ route('perfiles.index') }}">Perfiles</a></li>
+                        @endif
+                        @if ($u->puedeVer('accesos'))
+                            <li><a class="subitem {{ request()->routeIs('accesos.*') ? 'active' : '' }}" href="{{ route('accesos.index') }}">Accesos</a></li>
+                        @endif
+                    </ul>
                 </li>
             @endif
         </ul>

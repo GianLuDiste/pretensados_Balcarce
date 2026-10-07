@@ -70,7 +70,6 @@ class ClienteController extends Controller
     {
         return view('clientes.print', [
             'clientes' => $this->consulta($r)->get(),
-            'empresa'  => DB::table('parametros_empresa')->first(),
             'filtro'   => trim($r->q . ' ' . ($r->filled('localidad') ? Ciudad::find($r->localidad)?->DESCRIPCION : '')),
         ]);
     }

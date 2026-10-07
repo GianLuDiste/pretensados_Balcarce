@@ -38,4 +38,5 @@ class Cotizacion extends Model
     public function plazo(): BelongsTo       { return $this->belongsTo(Plazo::class, 'IdPlazo_Entrega', 'IdPlazo'); }
     public function formaPago(): BelongsTo   { return $this->belongsTo(FormaPago::class, 'IdForma_Pago', 'CODIGO'); }
     public function vigencia(): BelongsTo    { return $this->belongsTo(Vigencia::class, 'IdVigencia', 'IdVigencia'); }
+    public function estado(): BelongsTo      { return $this->belongsTo(CotizacionEstado::class, 'IdStatus', 'idStatus'); }
 }

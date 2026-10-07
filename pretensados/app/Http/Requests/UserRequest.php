@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -11,7 +10,7 @@ class UserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (bool) $this->user()?->es_admin;
+        return true; // Se controla en las rutas: acceso:usuarios,M
     }
 
     public function rules(): array
@@ -25,10 +24,9 @@ class UserRequest extends FormRequest
             'email'      => ['required', 'email', 'max:100', Rule::unique('users', 'email')->ignore($usuario)],
             'telefono'   => ['nullable', 'string', 'max:30'],
             'password'   => [$alta ? 'required' : 'nullable', 'confirmed', Password::min(8)],
-            'es_admin'   => ['nullable', 'boolean'],
             'activo'     => ['nullable', 'boolean'],
-            'permisos'   => ['nullable', 'array'],
-            'permisos.*' => ['nullable', Rule::in(array_keys(User::PERMISOS))],
+            'perfiles'   => ['nullable', 'array'],
+            'perfiles.*' => ['integer', Rule::exists('perfiles', 'id')],
         ];
     }
 
@@ -36,7 +34,7 @@ class UserRequest extends FormRequest
     {
         return [
             'name' => 'nombre completo', 'username' => 'nombre de usuario', 'email' => 'email',
-            'telefono' => 'teléfono', 'password' => 'contraseña', 'permisos.*' => 'permiso',
+            'telefono' => 'teléfono', 'password' => 'contraseña', 'perfiles.*' => 'perfil',
         ];
     }
 }

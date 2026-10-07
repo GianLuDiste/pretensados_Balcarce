@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Usuarios')
 @section('content')
+@php($puedeModificar = auth()->user()->puedeModificar('usuarios'))
 <h1>Usuarios</h1>
 
 @if ($errors->any()) <div class="alert err" role="alert">{{ $errors->first() }}</div> @endif
@@ -8,17 +9,22 @@
 <section class="panel">
     <form method="GET" class="grid" style="align-items:end">
         <div><label for="q">Buscar por nombre, usuario o email</label><input id="q" name="q" value="{{ request('q') }}"></div>
+        <div><label for="perfil">Perfil</label>
+            <select id="perfil" name="perfil">
+                <option value="">Todos</option>
+                @foreach ($perfiles as $p)<option value="{{ $p->id }}" @selected(request('perfil') == $p->id)>{{ $p->nombre }}</option>@endforeach
+            </select></div>
         <div class="actions">
             <button class="btn">Buscar</button>
             <a class="btn sec" href="{{ route('usuarios.index') }}">Limpiar</a>
-            <a class="btn" href="{{ route('usuarios.create') }}">Nuevo usuario</a>
+            @if ($puedeModificar) <a class="btn" href="{{ route('usuarios.create') }}">Nuevo usuario</a> @endif
         </div>
     </form>
 </section>
 
 <section class="panel scroll">
     <table>
-        <thead><tr><th>Usuario</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Permisos</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr><th>Usuario</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Perfiles</th><th>Estado</th><th></th></tr></thead>
         <tbody>
         @forelse ($usuarios as $u)
             <tr>
@@ -27,20 +33,18 @@
                 <td>{{ $u->email }}</td>
                 <td>{{ $u->telefono }}</td>
                 <td>
-                    @if ($u->es_admin) <span class="badge adm">Administrador</span>
-                    @else @foreach (str_split((string) $u->permisos) as $l)<span class="badge" title="{{ \App\Models\User::PERMISOS[$l] ?? $l }}">{{ \App\Models\User::PERMISOS[$l] ?? $l }}</span>@endforeach
-                    @endif
+                    @forelse ($u->perfiles as $p)<span class="badge {{ $p->es_admin ? 'adm' : '' }}">{{ $p->nombre }}</span>@empty<span class="info">Sin perfiles</span>@endforelse
                 </td>
                 <td>@if ($u->activo) Activo @else <span class="badge off">Inactivo</span> @endif</td>
                 <td class="actions">
-                    <a href="{{ route('usuarios.edit', $u) }}">Editar</a>
-                    @unless ($u->is(auth()->user()))
+                    <a href="{{ route('usuarios.edit', $u) }}">{{ $puedeModificar ? 'Editar' : 'Ver' }}</a>
+                    @if ($puedeModificar && ! $u->is(auth()->user()))
                         <form method="POST" action="{{ route('usuarios.destroy', $u) }}"
                               onsubmit="return confirm('¿Confirma la eliminación del usuario {{ $u->username }}?')">
                             @csrf @method('DELETE')
                             <button class="btn danger" style="padding:.15rem .6rem">Eliminar</button>
                         </form>
-                    @endunless
+                    @endif
                 </td>
             </tr>
         @empty

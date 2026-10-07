@@ -33,8 +33,20 @@
         </div>
     </section>
 
-    <section class="panel">
-        <h2>Datos del cliente</h2>
+    @php
+        // Si hay errores en las condiciones, se abre esa pestaña para que se vean.
+        $camposCond = ['id_plazo_entrega', 'lugar_entrega', 'flete', 'observaciones', 'id_forma_pago', 'obs_fpago', 'id_vigencia'];
+        $tabCond = $errors->hasAny($camposCond) && ! $errors->hasAny(['id_cliente', 'contacto']);
+    @endphp
+    <section class="panel tabs" id="tabs-cotiz">
+        <div class="tab-list" role="tablist" aria-label="Datos de la cotización">
+            <button type="button" role="tab" id="tab-cliente" aria-controls="pane-cliente" aria-selected="{{ $tabCond ? 'false' : 'true' }}" tabindex="{{ $tabCond ? '-1' : '0' }}">Datos del cliente</button>
+            <button type="button" role="tab" id="tab-cond" aria-controls="pane-cond" aria-selected="{{ $tabCond ? 'true' : 'false' }}" tabindex="{{ $tabCond ? '0' : '-1' }}">
+                Condiciones generales @if ($errors->hasAny($camposCond))<span class="tab-alerta" title="Hay datos para revisar">!</span>@endif
+            </button>
+        </div>
+
+        <div class="tab-pane" role="tabpanel" id="pane-cliente" aria-labelledby="tab-cliente" @if ($tabCond) hidden @endif>
         <div class="grid">
             <div class="span2"><label for="id_cliente">Cliente</label>
                 <select id="id_cliente" name="id_cliente" required>
@@ -42,7 +54,7 @@
                     @foreach ($clientes as $cl)
                         <option value="{{ $cl->CODIGO }}" @selected($v('id_cliente') == $cl->CODIGO)
                             data-dir="{{ $cl->DIRECCION }}"
-                            data-tel="{{ trim($cl->TELEFONO . ($cl->FAX ? ' / ' . $cl->FAX : '')) }}"
+                            data-tel="{{ collect([$cl->TELEFONO, $cl->FAX])->map(fn ($t) => trim((string) $t))->filter()->implode(' / ') }}"
                             data-loc="{{ $cl->ciudad?->DESCRIPCION }}"
                             data-mail="{{ $cl->email }}" data-cp="{{ $cl->cod_postal }}"
                             data-cuit="{{ $cl->CUIT }}" data-contacto="{{ $cl->CONTACTO }}">{{ $cl->razon_social }}</option>
@@ -56,10 +68,9 @@
             <div><label>CUIT</label><input id="c-cuit" readonly></div>
             <div><label for="contacto">Contacto</label><input id="contacto" name="contacto" maxlength="100" value="{{ $v('contacto') }}"></div>
         </div>
-    </section>
+        </div>
 
-    <section class="panel">
-        <h2>Condiciones generales</h2>
+        <div class="tab-pane" role="tabpanel" id="pane-cond" aria-labelledby="tab-cond" @unless ($tabCond) hidden @endunless>
         <div class="grid">
             <div><label for="id_plazo_entrega">Plazo de entrega</label>
                 <select id="id_plazo_entrega" name="id_plazo_entrega" required>
@@ -81,6 +92,7 @@
                     @foreach ($vigencias as $vg)<option value="{{ $vg->IdVigencia }}" @selected($v('id_vigencia') == $vg->IdVigencia)>{{ $vg->DESCRIPCION }}</option>@endforeach
                 </select></div>
         </div>
+        </div>
     </section>
 
     <section class="panel">
@@ -101,32 +113,46 @@
         <p><button type="button" class="btn sec" id="btn-add">Agregar ítem</button></p>
     </section>
 
-    <section class="panel">
-        <div class="grid">
-            <div><label for="porc_iva">% IVA</label><input id="porc_iva" type="number" step="any" name="porc_iva" value="{{ $v('porc_iva') }}"></div>
-            <div><label for="porc_iibb">% IIBB</label><input id="porc_iibb" type="number" step="any" name="porc_iibb" value="{{ $v('porc_iibb') }}"></div>
-            <div><label>Kgs. total</label><input id="t-kgs" readonly></div>
-            <div><label>Subtotal</label><input id="t-importe" readonly></div>
-            <div><label>IVA</label><input id="t-iva" readonly></div>
-            <div><label>IIBB</label><input id="t-iibb" readonly></div>
-            <div><label><strong>Total</strong></label><input id="t-total" readonly style="font-weight:700"></div>
+    <section class="panel totales-panel">
+        <div class="totales-info">
+            <div class="kgs"><span>Kgs. total</span> <output id="t-kgs">0</output></div>
+            <p class="info">Los totales se recalculan en el servidor al guardar.</p>
         </div>
-        <p class="info">Los totales se recalculan en el servidor al guardar.</p>
+        <table class="totales" aria-label="Totales de la cotización">
+            <tbody>
+                <tr>
+                    <th scope="row">Subtotal</th><td></td>
+                    <td class="num"><output id="t-importe">0,00</output></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="porc_iva">% IVA</label></th>
+                    <td><input id="porc_iva" type="number" step="any" min="0" name="porc_iva" value="{{ $v('porc_iva') }}" class="pct"></td>
+                    <td class="num"><output id="t-iva">0,00</output></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="porc_iibb">% IIBB</label></th>
+                    <td><input id="porc_iibb" type="number" step="any" min="0" name="porc_iibb" value="{{ $v('porc_iibb') }}" class="pct"></td>
+                    <td class="num"><output id="t-iibb">0,00</output></td>
+                </tr>
+                <tr class="total">
+                    <th scope="row">TOTAL</th><td></td>
+                    <td class="num"><output id="t-total">0,00</output></td>
+                </tr>
+            </tbody>
+        </table>
     </section>
 
-    @php($u = auth()->user())
+    @php($modifica = auth()->user()->puedeModificar('cotizaciones'))
     <div class="actions">
-        @if ($modo === 'editar' ? $u->puede('M') : $u->puede('A'))
+        @if ($modifica)
             <button class="btn">Guardar</button>
         @endif
-        <a class="btn sec" href="{{ route('cotizaciones.index') }}">Cancelar</a>
+        <a class="btn sec" href="{{ $volver }}">{{ $modifica ? 'Cancelar' : 'Volver' }}</a>
         @if ($modo === 'editar')
-            @if ($u->puede('A')) <a class="btn sec" href="{{ route('cotizaciones.newVersion', [$nro, $ver]) }}">Nueva versión</a> @endif
-            @if ($u->puede('I'))
-                <a class="btn sec" target="_blank" href="{{ route('cotizaciones.print', [$nro, $ver]) }}">Imprimir</a>
-                <a class="btn sec" target="_blank" href="{{ route('cotizaciones.print', [$nro, $ver, 'rentab' => 1]) }}">Imprimir con % rentabilidad</a>
-            @endif
-            @if ($u->puede('B'))
+            @if ($modifica) <a class="btn sec" href="{{ route('cotizaciones.newVersion', [$nro, $ver]) }}">Nueva versión</a> @endif
+            <a class="btn sec" target="_blank" href="{{ route('cotizaciones.print', [$nro, $ver]) }}">Imprimir</a>
+            <a class="btn sec" target="_blank" href="{{ route('cotizaciones.print', [$nro, $ver, 'rentab' => 1]) }}">Imprimir con % rentabilidad</a>
+            @if ($modifica)
                 <button class="btn danger" form="form-eliminar"
                     onclick="return confirm('¿Confirma la eliminación de la cotización {{ $nro }}/{{ $ver }}?')">Eliminar</button>
             @endif
@@ -183,12 +209,38 @@ function recalcTotales() {
     });
     const iva = Math.round(imp * num($('#porc_iva').value)) / 100;
     const iibb = Math.round(imp * num($('#porc_iibb').value)) / 100;
-    $('#t-kgs').value = kgs.toFixed(3);
-    $('#t-importe').value = imp.toFixed(2);
-    $('#t-iva').value = iva.toFixed(2);
-    $('#t-iibb').value = iibb.toFixed(2);
-    $('#t-total').value = (imp + iva + iibb).toFixed(2);
+    $('#t-kgs').value = fmt(kgs, 3);
+    $('#t-importe').value = fmt(imp);
+    $('#t-iva').value = fmt(iva);
+    $('#t-iibb').value = fmt(iibb);
+    $('#t-total').value = '$ ' + fmt(imp + iva + iibb);
 }
+function fmt(n, dec = 2) { return n.toLocaleString('es-AR', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+
+// --- Pestañas: Datos del cliente / Condiciones generales ---
+(function () {
+    const tabs = $$('#tabs-cotiz [role=tab]');
+    function activar(tab, foco = false) {
+        tabs.forEach(t => {
+            const sel = t === tab;
+            t.setAttribute('aria-selected', sel); t.tabIndex = sel ? 0 : -1;
+            document.getElementById(t.getAttribute('aria-controls')).hidden = !sel;
+        });
+        if (foco) tab.focus();
+    }
+    tabs.forEach((t, i) => {
+        t.addEventListener('click', () => activar(t));
+        t.addEventListener('keydown', e => {      // flechas izquierda/derecha entre pestañas
+            const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+            if (d) { e.preventDefault(); activar(tabs[(i + d + tabs.length) % tabs.length], true); }
+        });
+    });
+    // Un campo obligatorio vacío en la pestaña oculta: se muestra esa pestaña para que el navegador pueda señalarlo.
+    $('#form-cotiz').addEventListener('invalid', e => {
+        const pane = e.target.closest('.tab-pane');
+        if (pane && pane.hidden) activar(tabs.find(t => t.getAttribute('aria-controls') === pane.id));
+    }, true);
+})();
 
 async function cargarCosto(row) {
     const id = $('.i-art', row).value;
