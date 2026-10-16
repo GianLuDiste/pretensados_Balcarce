@@ -15,8 +15,18 @@ use Illuminate\Support\Facades\DB;
 class ClienteController extends Controller
 {
     /** Combo1 + BCombo del VB: grilla con búsqueda por código, razón social, CUIT o contacto. */
+    private const FILTROS = 'filtros.clientes';
+
+    /** URL de la consulta con los últimos filtros y página usados (para Cancelar / Volver). */
+    public static function urlConsulta(): string
+    {
+        return route('clientes.index', session(self::FILTROS, []));
+    }
+
     public function index(Request $r)
     {
+        $r->session()->put(self::FILTROS, $r->query());
+
         return view('clientes.index', [
             'clientes' => $this->consulta($r)->paginate(25)->withQueryString(),
             'ciudades' => Ciudad::orderBy('DESCRIPCION')->get(),
@@ -61,7 +71,7 @@ class ClienteController extends Controller
 
         $cliente->delete();
 
-        return redirect()->route('clientes.index')
+        return redirect(self::urlConsulta())
             ->with('ok', "Cliente {$cliente->CODIGO} - {$cliente->razon_social} eliminado.");
     }
 
@@ -114,6 +124,7 @@ class ClienteController extends Controller
     {
         return [
             'cliente'     => $cliente,
+            'volver'      => self::urlConsulta(),
             'ciudades'    => Ciudad::orderBy('DESCRIPCION')->get(),
             'provincias'  => Provincia::orderBy('DESCRIPCION')->get(),
             'condiciones' => CondicionIva::orderBy('DESCRIPCION')->get(),

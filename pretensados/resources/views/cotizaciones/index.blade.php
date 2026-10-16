@@ -39,6 +39,9 @@
         </div>
         <div class="actions"><button class="btn">Buscar</button><a class="btn sec" href="{{ route('cotizaciones.index') }}">Limpiar</a></div>
     </form>
+    @if ($filtro['desde'] && ! $filtro['hasta'] && ! request()->hasAny(['nro', 'cliente', 'estados']) && $filtro['desde'] === now()->subYear()->toDateString())
+        <p class="info" style="margin:.7rem 0 0">Se muestran las cotizaciones del último año. Para buscar en todo el historial, borrá la fecha "desde" y tocá Buscar.</p>
+    @endif
 </section>
 
 <section class="panel scroll">
@@ -57,14 +60,7 @@
                 <td class="num">{{ number_format($c->Imp_Total, 2, ',', '.') }}</td>
                 <td><span class="badge {{ \App\Models\CotizacionEstado::clase($c->IdStatus) }}" title="{{ $c->IdStatus }}">{{ $c->estado?->estado ?? $c->IdStatus }}</span></td>
                 <td class="iconos">
-                    <a class="ico-btn" href="{{ route('cotizaciones.edit', [$c->Nro_Cotizacion, $c->Version]) }}"
-                       title="{{ $modifica ? 'Abrir / editar' : 'Ver' }} cotización {{ $ref }}" aria-label="{{ $modifica ? 'Abrir' : 'Ver' }} cotización {{ $ref }}">
-                        @if ($modifica)
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                        @else
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-                        @endif
-                    </a>
+                    @include('layouts._ico-abrir', ['href' => route('cotizaciones.edit', [$c->Nro_Cotizacion, $c->Version]), 'modifica' => $modifica, 'que' => "cotización {$ref}"])
                     <a class="ico-btn" href="{{ route('cotizaciones.print', [$c->Nro_Cotizacion, $c->Version]) }}" target="_blank"
                        title="Imprimir cotización {{ $ref }}" aria-label="Imprimir cotización {{ $ref }}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>

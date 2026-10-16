@@ -19,7 +19,10 @@
     </style>
 </head>
 <body>
-<p class="noprint"><button onclick="window.print()">Imprimir</button></p>
+<p class="noprint">
+    <button onclick="window.print()">Imprimir / Guardar PDF</button>
+    <button onclick="window.close(); setTimeout(() => location.href = @js(\App\Http\Controllers\ClienteController::urlConsulta()), 150)">Cerrar</button>
+</p>
 @include('layouts._print-header', ['titulo' => 'LISTADO DE CLIENTES', 'subtitulo' => 'Fecha: ' . now()->format('d/m/Y')])
 
 <p>{{ $clientes->count() }} clientes @if ($filtro) · Filtro: {{ $filtro }} @endif</p>

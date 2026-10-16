@@ -88,7 +88,7 @@ class CotizacionService
             $cant  = (int) $i['cantidad'];
             $kgsU  = (float) ($i['kgs_unit'] ?? 0);
             $pcioU = (float) $i['pcio_unit'];
-            $kgsT  = round($cant * $kgsU, 3);
+            $kgsT  = round($cant * $kgsU, 2);   // kilos: 2 decimales
             $pcioT = round($cant * $pcioU, 2);
 
             $kgs     += $kgsT;
@@ -139,9 +139,10 @@ class CotizacionService
     {
         CotizacionItem::where('Nro_Cotizacion', $nro)->where('Version', $ver)->delete();
 
+        // Item = número de renglón: el orden ya no depende de dónde MyISAM ubique las filas.
         CotizacionItem::insert(array_map(
-            fn ($f) => $f + ['Nro_Cotizacion' => $nro, 'Version' => $ver],
-            $filas
+            fn ($f, $n) => $f + ['Nro_Cotizacion' => $nro, 'Version' => $ver, 'Item' => $n + 1],
+            $filas, array_keys($filas)
         ));
     }
 }

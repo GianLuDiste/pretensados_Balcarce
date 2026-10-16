@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Clientes')
+@section('main_class', 'page ancha')
 @section('content')
 @php($u = auth()->user())
 <h1>Clientes</h1>
@@ -26,22 +27,24 @@
 <section class="panel scroll">
     <table>
         <thead><tr>
-            <th class="num">Código</th><th>Razón social</th><th>Localidad</th><th>Teléfono</th><th>CUIT</th><th>IVA</th><th>Contacto</th><th></th>
+            <th class="num">Código</th><th>Razón social</th><th>Localidad</th><th>Teléfono</th><th>Contacto</th>
+            <th><span class="sr-only">Acciones</span></th>
         </tr></thead>
         <tbody>
+        @php($modifica = $u->puedeModificar('clientes'))
         @forelse ($clientes as $c)
             <tr>
                 <td class="num">{{ $c->CODIGO }}</td>
                 <td><strong>{{ $c->razon_social }}</strong></td>
                 <td>{{ $c->ciudad?->DESCRIPCION }}</td>
                 <td>{{ $c->TELEFONO }}</td>
-                <td>{{ $c->CUIT }}</td>
-                <td>{{ $c->condicionIva?->DESCRIPCION }}</td>
                 <td>{{ $c->CONTACTO }}</td>
-                <td class="actions"><a href="{{ route('clientes.edit', $c) }}">Abrir</a></td>
+                <td class="iconos">
+                    @include('layouts._ico-abrir', ['href' => route('clientes.edit', $c), 'modifica' => $modifica, 'que' => "cliente {$c->CODIGO} - {$c->razon_social}"])
+                </td>
             </tr>
         @empty
-            <tr><td colspan="8" class="info">No hay clientes para esa búsqueda.</td></tr>
+            <tr><td colspan="6" class="info">No hay clientes para esa búsqueda.</td></tr>
         @endforelse
         </tbody>
     </table>

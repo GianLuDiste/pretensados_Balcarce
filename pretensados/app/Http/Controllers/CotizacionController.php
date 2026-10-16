@@ -28,6 +28,12 @@ class CotizacionController extends Controller
     /** cmdCons / ConsCotiz del VB: listado con búsqueda. */
     public function index(Request $r)
     {
+        // Sin ningún filtro (menú, "Limpiar", primera entrada): se muestra solo el último año.
+        // Si el usuario borra la fecha y busca, el parámetro llega vacío y se consulta todo el historial.
+        if (! $r->hasAny(['nro', 'cliente', 'desde', 'hasta', 'estados'])) {
+            return redirect()->route('cotizaciones.index', ['desde' => now()->subYear()->toDateString()] + $r->query());
+        }
+
         $f = $r->validate([
             'nro'       => ['nullable', 'integer'],
             'cliente'   => ['nullable', 'string', 'max:100'],

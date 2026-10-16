@@ -31,7 +31,8 @@ class Cotizacion extends Model
     {
         return CotizacionItem::query()
             ->where('Nro_Cotizacion', $this->Nro_Cotizacion)
-            ->where('Version', $this->Version);
+            ->where('Version', $this->Version)
+            ->orderBy('Item');
     }
 
     public function cliente(): BelongsTo     { return $this->belongsTo(Cliente::class, 'IdCliente', 'CODIGO'); }

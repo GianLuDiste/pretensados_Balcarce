@@ -21,7 +21,7 @@
     @csrf
     @if ($editar) @method('PUT') @endif
 
-    <fieldset style="border:0; padding:0; margin:0; min-width:0" @disabled(! $puedeGuardar)>
+     <fieldset class="plano" @disabled(! $puedeGuardar)>
     <section class="panel">
         <h2>Datos generales</h2>
         <div class="grid">
@@ -78,7 +78,7 @@
 
     <div class="actions">
         @if ($puedeGuardar) <button class="btn">Guardar</button> @endif
-        <a class="btn sec" href="{{ route('clientes.index') }}">{{ $puedeGuardar ? 'Cancelar' : 'Volver' }}</a>
+        <a class="btn sec" href="{{ $volver }}">{{ $puedeGuardar ? 'Cancelar' : 'Volver' }}</a>
         @if ($editar && $puedeGuardar)
             <button class="btn danger" form="form-eliminar"
                 onclick="return confirm('¿Confirma el borrado del cliente {{ $cliente->CODIGO }} - {{ addslashes($cliente->razon_social) }}?')">Eliminar</button>

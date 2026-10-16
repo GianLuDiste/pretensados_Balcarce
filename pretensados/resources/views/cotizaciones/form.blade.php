@@ -5,6 +5,9 @@
     $items = old('items', $form['items']);
     $v = fn ($k) => old($k, $form[$k]);
     $action = $modo === 'editar' ? route('cotizaciones.update', [$nro, $ver]) : route('cotizaciones.store');
+    // Solo consulta: los datos se muestran bloqueados (fieldset disabled por sección; las pestañas siguen funcionando).
+    $modifica = auth()->user()->puedeModificar('cotizaciones');
+    $ro = ! $modifica;
 @endphp
 
 @section('content')
@@ -20,17 +23,19 @@
     </div>
 @endif
 
-<form id="form-cotiz" method="POST" action="{{ $action }}">
+<form id="form-cotiz" method="POST" action="{{ $action }}" @class(['solo-lectura' => $ro])>
     @csrf
     @if ($modo === 'editar') @method('PUT') @endif
     @if ($modo === 'version') <input type="hidden" name="nro_cotizacion" value="{{ $nro }}"> @endif
 
     <section class="panel">
-        <div class="grid">
+        <fieldset class="plano" @disabled($ro)>
+        <div class="cabecera-der">
             <div><label for="fecha">Fecha</label><input id="fecha" type="date" name="fecha" value="{{ $v('fecha') }}" required></div>
             <div><label for="porc_recargo">% s/Costo (por defecto en los ítems)</label>
-                <input id="porc_recargo" type="number" step="any" name="porc_recargo" value="{{ $v('porc_recargo') }}"></div>
+                <input id="porc_recargo" type="number" step="any" min="0" name="porc_recargo" value="{{ $v('porc_recargo') }}"></div>
         </div>
+        </fieldset>
     </section>
 
     @php
@@ -47,6 +52,7 @@
         </div>
 
         <div class="tab-pane" role="tabpanel" id="pane-cliente" aria-labelledby="tab-cliente" @if ($tabCond) hidden @endif>
+        <fieldset class="plano" @disabled($ro)>
         <div class="grid">
             <div class="span2"><label for="id_cliente">Cliente</label>
                 <select id="id_cliente" name="id_cliente" required>
@@ -68,9 +74,11 @@
             <div><label>CUIT</label><input id="c-cuit" readonly></div>
             <div><label for="contacto">Contacto</label><input id="contacto" name="contacto" maxlength="100" value="{{ $v('contacto') }}"></div>
         </div>
+        </fieldset>
         </div>
 
         <div class="tab-pane" role="tabpanel" id="pane-cond" aria-labelledby="tab-cond" @unless ($tabCond) hidden @endunless>
+        <fieldset class="plano" @disabled($ro)>
         <div class="grid">
             <div><label for="id_plazo_entrega">Plazo de entrega</label>
                 <select id="id_plazo_entrega" name="id_plazo_entrega" required>
@@ -92,16 +100,19 @@
                     @foreach ($vigencias as $vg)<option value="{{ $vg->IdVigencia }}" @selected($v('id_vigencia') == $vg->IdVigencia)>{{ $vg->DESCRIPCION }}</option>@endforeach
                 </select></div>
         </div>
+        </fieldset>
         </div>
     </section>
 
     <section class="panel">
         <h2>Ítems</h2>
+        <fieldset class="plano" @disabled($ro)>
         <div class="scroll">
         <table id="tabla-items">
             <thead><tr>
-                <th>#</th><th style="min-width:260px">Artículo</th><th>Cant.</th><th>% s/costo</th>
-                <th class="num">Kgs. unit.</th><th class="num">Kgs. total</th><th class="num">Pcio. unit.</th><th class="num">Pcio. total</th><th></th>
+                <th>#</th><th style="min-width:240px">Artículo</th><th class="num">Cant.</th><th class="num">% s/costo</th>
+                <th class="num">Kgs. unit.</th><th class="num">Kgs. total</th><th class="num">Pcio. unit.</th><th class="num">Pcio. total</th>
+                <th><span class="sr-only">Acciones</span></th>
             </tr></thead>
             <tbody id="items-body">
             @foreach ($items as $i => $it)
@@ -111,13 +122,15 @@
         </table>
         </div>
         <p><button type="button" class="btn sec" id="btn-add">Agregar ítem</button></p>
+        </fieldset>
     </section>
 
     <section class="panel totales-panel">
         <div class="totales-info">
             <div class="kgs"><span>Kgs. total</span> <output id="t-kgs">0</output></div>
-            <p class="info">Los totales se recalculan en el servidor al guardar.</p>
+            @unless ($ro)<p class="info">Los totales se recalculan en el servidor al guardar.</p>@endunless
         </div>
+        <fieldset class="plano" @disabled($ro)>
         <table class="totales" aria-label="Totales de la cotización">
             <tbody>
                 <tr>
@@ -140,9 +153,9 @@
                 </tr>
             </tbody>
         </table>
+        </fieldset>
     </section>
 
-    @php($modifica = auth()->user()->puedeModificar('cotizaciones'))
     <div class="actions">
         @if ($modifica)
             <button class="btn">Guardar</button>
@@ -195,8 +208,8 @@ $('#id_forma_pago').addEventListener('change', e => {
 // --- Ítems ---
 function recalcFila(row) {
     const cant = num($('.i-cant', row).value);
-    $('.i-kgs-total', row).textContent = (cant * num($('.i-kgs', row).value)).toFixed(3);
-    $('.i-pcio-total', row).textContent = (cant * num($('.i-pcio', row).value)).toFixed(2);
+    $('.i-kgs-total', row).textContent = fmt(cant * num($('.i-kgs', row).value));
+    $('.i-pcio-total', row).textContent = fmt(Math.round(cant * num($('.i-pcio', row).value) * 100) / 100);
     recalcTotales();
 }
 
@@ -204,18 +217,34 @@ function recalcTotales() {
     let kgs = 0, imp = 0;
     $$('#items-body tr').forEach(r => {
         const cant = num($('.i-cant', r).value);
-        kgs += cant * num($('.i-kgs', r).value);
+        kgs += Math.round(cant * num($('.i-kgs', r).value) * 100) / 100;
         imp += Math.round(cant * num($('.i-pcio', r).value) * 100) / 100;
     });
     const iva = Math.round(imp * num($('#porc_iva').value)) / 100;
     const iibb = Math.round(imp * num($('#porc_iibb').value)) / 100;
-    $('#t-kgs').value = fmt(kgs, 3);
+    $('#t-kgs').value = fmt(kgs);
     $('#t-importe').value = fmt(imp);
     $('#t-iva').value = fmt(iva);
     $('#t-iibb').value = fmt(iibb);
     $('#t-total').value = '$ ' + fmt(imp + iva + iibb);
 }
 function fmt(n, dec = 2) { return n.toLocaleString('es-AR', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+
+// Al entrar a un campo editable se selecciona todo su contenido: lo que se escribe reemplaza el valor.
+// (Delegado en el formulario: alcanza también a los ítems que se agregan después.)
+(function () {
+    const editable = el => el.matches('input:not([type=checkbox]):not([type=radio]):not([type=date]):not([readonly]):not(:disabled), textarea:not([readonly]):not(:disabled)');
+    let reciente = null;
+    $('#form-cotiz').addEventListener('focusin', e => {
+        if (!editable(e.target)) return;
+        reciente = e.target;
+        setTimeout(() => { try { e.target.select(); } catch (_) {} }, 0);
+    });
+    // El clic que da el foco no debe deshacer la selección (sí los clics siguientes, para posicionar el cursor).
+    $('#form-cotiz').addEventListener('mouseup', e => {
+        if (e.target === reciente) { e.preventDefault(); reciente = null; }
+    });
+})();
 
 // --- Pestañas: Datos del cliente / Condiciones generales ---
 (function () {
@@ -263,7 +292,7 @@ function enlazarFila(row) {
     $('.i-art', row).addEventListener('change', async () => {
         const d = await cargarCosto(row);
         if (!d) return;
-        $('.i-kgs', row).value = d.peso;
+        $('.i-kgs', row).value = num(d.peso).toFixed(2);
         if ($('.i-rec', row).value === '') $('.i-rec', row).value = $('#porc_recargo').value || 0;
         aplicarPrecio(row);
     });
@@ -272,6 +301,10 @@ function enlazarFila(row) {
         aplicarPrecio(row);
     });
     $$('.i-cant, .i-kgs, .i-pcio', row).forEach(el => el.addEventListener('input', () => recalcFila(row)));
+    // Pesos y kilos: al salir del campo se normalizan a 2 decimales
+    $$('.i-pcio, .i-kgs', row).forEach(el => el.addEventListener('blur', e => {
+        if (e.target.value !== '') { e.target.value = num(e.target.value).toFixed(2); recalcFila(row); }
+    }));
     $('.i-del', row).addEventListener('click', () => { row.remove(); renumerar(); recalcTotales(); });
 }
 

@@ -145,12 +145,20 @@ label { display: block; font-size: .82rem; font-weight: 600; color: var(--muted)
 input, select, textarea { width: 100%; padding: .55rem .65rem; font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--line); border-radius: 6px; }
 input::placeholder { color: rgba(255,255,255,.4); }
 input:focus, select:focus, textarea:focus { border-color: var(--lime); }
+input[type=number] { text-align: right; font-variant-numeric: tabular-nums; }   /* los números, alineados a la derecha */
 input[type=checkbox], input[type=radio] { width: 1.05rem; height: 1.05rem; padding: 0; accent-color: var(--lime); }
 input[readonly] { background: rgba(30,39,64,.55); color: var(--soft); border-style: dashed; }
 fieldset { border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; margin: 0; }
 fieldset:disabled { opacity: .5; }
 fieldset.plano { border: 0; padding: 0; min-width: 0; }          /* agrupa un formulario entero (modo solo lectura) */
-fieldset.plano:disabled { opacity: .75; }
+fieldset.plano:disabled { opacity: 1; }
+/* Modo consulta: campos bloqueados con aspecto de solo lectura (legibles, sin parecer un error) */
+fieldset.plano:disabled :is(input, select, textarea) { background: rgba(30,39,64,.55); color: var(--soft); border-style: dashed; opacity: 1;
+                                                     -webkit-text-fill-color: var(--soft); cursor: default; }
+fieldset.plano:disabled select { appearance: none; background-image: none; }
+fieldset.plano:disabled input[type=checkbox], fieldset.plano:disabled input[type=radio] { opacity: .8; }
+.solo-lectura .i-del, .solo-lectura #btn-add { display: none; }
+.alert.info-ro { background: rgba(120,170,255,.10); color: #BCD3FF; border: 1px solid rgba(120,170,255,.35); }
 .niveles { display: flex; gap: 1.1rem; flex-wrap: wrap; }
 .niveles .check-line { margin: 0; white-space: nowrap; }
 legend { font-size: .82rem; font-weight: 600; color: var(--muted); padding: 0 .4rem; }
@@ -173,6 +181,15 @@ td.iconos { white-space: nowrap; text-align: right; width: 1%; padding-top: .3re
 .ico-btn + .ico-btn { margin-left: .2rem; }
 .ico-btn svg { width: 18px; height: 18px; }
 .ico-btn:hover { background: rgba(160,199,40,.12); border-color: var(--ok-line); }
+button.ico-btn { background: none; cursor: pointer; padding: 0; font: inherit; }
+.ico-btn.peligro { color: var(--danger-ink); }
+.ico-btn.peligro:hover { background: var(--danger-bg); border-color: var(--danger-line); }
+
+/* Grilla de ítems: sin flechitas en los números para que entren los importes completos */
+#tabla-items input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-left: .5rem; padding-right: .5rem; }
+#tabla-items input[type=number]::-webkit-inner-spin-button,
+#tabla-items input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+#tabla-items td, #tabla-items th { padding-left: .45rem; padding-right: .45rem; }
 
 /* Barra de filtros de las consultas: cada campo con su ancho natural, baja de renglón si no entra */
 .filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .85rem 1rem; }
@@ -182,6 +199,11 @@ td.iconos { white-space: nowrap; text-align: right; width: 1%; padding-top: .3re
 .filtros .f-fecha { flex: 0 0 auto; }
 .filtros .f-estado { flex: 0 1 15rem; }
 .filtros .actions { flex: 0 0 auto; }
+
+/* Cabecera de la cotización: Fecha y % s/Costo a la derecha, cada uno a la mitad del ancho anterior */
+.cabecera-der { display: flex; justify-content: flex-end; gap: .85rem 1rem; flex-wrap: wrap; }
+.cabecera-der > div { flex: 0 1 calc(25% - .5rem); min-width: 13rem; }
+@media (max-width: 640px) { .cabecera-der > div { flex: 1 1 100%; } }
 
 /* Pestañas dentro de un panel */
 .panel.tabs { padding-top: 0; }
